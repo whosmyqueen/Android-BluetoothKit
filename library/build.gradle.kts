@@ -1,17 +1,15 @@
 plugins {
-    alias(libs.plugins.android.application)
+    alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
 }
-
+android.buildFeatures.buildConfig = true
+android.buildFeatures.aidl = true
 android {
+    namespace = "com.inuker.bluetooth.library"
     compileSdk = 34
-    resourcePrefix = "bluetoothkit_"
+
     defaultConfig {
         minSdk = 25
-        targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
-
     }
 
     buildTypes {
@@ -21,23 +19,14 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "11"
     }
 }
 
 dependencies {
 
-//    implementation(libs.androidx.core.ktx)
-//    implementation(libs.androidx.appcompat)
-//    implementation(libs.material)
-//    implementation(libs.androidx.activity)
-//    implementation(libs.androidx.constraintlayout)
-//
-//    implementation(libs.xxpermissions)
-//    implementation(libs.android.ble)
-//    implementation(libs.utilcodex)
 }

@@ -1,217 +1,180 @@
-package com.inuker.bluetooth;
+package com.inuker.bluetooth
 
-import android.app.Activity;
-import android.content.Intent;
-import android.os.Bundle;
-import android.text.TextUtils;
-import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.TextView;
-import android.widget.Toast;
-
-import com.inuker.bluetooth.library.connect.listener.BleConnectStatusListener;
-import com.inuker.bluetooth.library.connect.response.BleMtuResponse;
-import com.inuker.bluetooth.library.connect.response.BleNotifyResponse;
-import com.inuker.bluetooth.library.connect.response.BleReadResponse;
-import com.inuker.bluetooth.library.connect.response.BleUnnotifyResponse;
-import com.inuker.bluetooth.library.connect.response.BleWriteResponse;
-import com.inuker.bluetooth.library.utils.BluetoothLog;
-import com.inuker.bluetooth.library.utils.ByteUtils;
-
-import static com.inuker.bluetooth.library.Constants.*;
-
-import java.util.UUID;
+import android.app.Activity
+import android.os.Bundle
+import android.text.TextUtils
+import android.view.View
+import android.widget.Button
+import android.widget.EditText
+import android.widget.TextView
+import com.inuker.bluetooth.library.Constants
+import com.inuker.bluetooth.library.connect.listener.BleConnectStatusListener
+import com.inuker.bluetooth.library.connect.response.BleMtuResponse
+import com.inuker.bluetooth.library.connect.response.BleNotifyResponse
+import com.inuker.bluetooth.library.connect.response.BleReadResponse
+import com.inuker.bluetooth.library.connect.response.BleUnnotifyResponse
+import com.inuker.bluetooth.library.connect.response.BleWriteResponse
+import com.inuker.bluetooth.library.utils.BluetoothLog
+import com.inuker.bluetooth.library.utils.ByteUtils
+import java.util.UUID
 
 /**
  * Created by dingjikerbo on 2016/9/6.
  */
-public class CharacterActivity extends Activity implements View.OnClickListener {
+class CharacterActivity : Activity(), View.OnClickListener {
+    private var mMac: String? = null
+    private var mService: UUID? = null
+    private var mCharacter: UUID? = null
 
-    private String mMac;
-    private UUID mService;
-    private UUID mCharacter;
+    private var mTvTitle: TextView? = null
 
-    private TextView mTvTitle;
+    private var mBtnRead: Button? = null
 
-    private Button mBtnRead;
+    private var mBtnWrite: Button? = null
+    private var mEtInput: EditText? = null
 
-    private Button mBtnWrite;
-    private EditText mEtInput;
+    private var mBtnNotify: Button? = null
+    private var mBtnUnnotify: Button? = null
+    private var mEtInputMtu: EditText? = null
+    private var mBtnRequestMtu: Button? = null
 
-    private Button mBtnNotify;
-    private Button mBtnUnnotify;
-    private EditText mEtInputMtu;
-    private Button mBtnRequestMtu;
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.character_activity)
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.character_activity);
+        val intent = intent
+        mMac = intent.getStringExtra("mac")
+        mService = intent.getSerializableExtra("service") as UUID?
+        mCharacter = intent.getSerializableExtra("character") as UUID?
 
-        Intent intent = getIntent();
-        mMac = intent.getStringExtra("mac");
-        mService = (UUID) intent.getSerializableExtra("service");
-        mCharacter = (UUID) intent.getSerializableExtra("character");
+        mTvTitle = findViewById<View>(R.id.title) as TextView
+        mTvTitle!!.text = String.format("%s", mMac)
 
-        mTvTitle = (TextView) findViewById(R.id.title);
-        mTvTitle.setText(String.format("%s", mMac));
+        mBtnRead = findViewById<View>(R.id.read) as Button
 
-        mBtnRead = (Button) findViewById(R.id.read);
+        mBtnWrite = findViewById<View>(R.id.write) as Button
+        mEtInput = findViewById<View>(R.id.input) as EditText
 
-        mBtnWrite = (Button) findViewById(R.id.write);
-        mEtInput = (EditText) findViewById(R.id.input);
+        mBtnNotify = findViewById<View>(R.id.notify) as Button
+        mBtnUnnotify = findViewById<View>(R.id.unnotify) as Button
 
-        mBtnNotify = (Button) findViewById(R.id.notify);
-        mBtnUnnotify = (Button) findViewById(R.id.unnotify);
+        mEtInputMtu = findViewById<View>(R.id.et_input_mtu) as EditText
+        mBtnRequestMtu = findViewById<View>(R.id.btn_request_mtu) as Button
 
-        mEtInputMtu = (EditText) findViewById(R.id.et_input_mtu);
-        mBtnRequestMtu = (Button) findViewById(R.id.btn_request_mtu);
+        mBtnRead!!.setOnClickListener(this)
+        mBtnWrite!!.setOnClickListener(this)
 
-        mBtnRead.setOnClickListener(this);
-        mBtnWrite.setOnClickListener(this);
+        mBtnNotify!!.setOnClickListener(this)
+        mBtnNotify!!.isEnabled = true
 
-        mBtnNotify.setOnClickListener(this);
-        mBtnNotify.setEnabled(true);
+        mBtnUnnotify!!.setOnClickListener(this)
+        mBtnUnnotify!!.isEnabled = false
 
-        mBtnUnnotify.setOnClickListener(this);
-        mBtnUnnotify.setEnabled(false);
-
-        mBtnRequestMtu.setOnClickListener(this);
+        mBtnRequestMtu!!.setOnClickListener(this)
     }
 
-    private final BleReadResponse mReadRsp = new BleReadResponse() {
-        @Override
-        public void onResponse(int code, byte[] data) {
-            if (code == REQUEST_SUCCESS) {
-                mBtnRead.setText(String.format("read: %s", ByteUtils.byteToString(data)));
-                CommonUtils.toast("success");
+    private val mReadRsp = BleReadResponse { code, data ->
+        if (code == Constants.REQUEST_SUCCESS) {
+            mBtnRead!!.text = String.format("read: %s", ByteUtils.byteToString(data))
+            CommonUtils.toast("success")
+        } else {
+            CommonUtils.toast("failed")
+            mBtnRead!!.text = "read"
+        }
+    }
+
+    private val mWriteRsp = BleWriteResponse { code ->
+        if (code == Constants.REQUEST_SUCCESS) {
+            CommonUtils.toast("success")
+        } else {
+            CommonUtils.toast("failed")
+        }
+    }
+
+    private val mNotifyRsp: BleNotifyResponse = object : BleNotifyResponse {
+        override fun onNotify(service: UUID, character: UUID, value: ByteArray) {
+            if (service == mService && character == mCharacter) {
+                mBtnNotify!!.text = String.format("%s", ByteUtils.byteToString(value))
+            }
+        }
+
+        override fun onResponse(code: Int) {
+            if (code == Constants.REQUEST_SUCCESS) {
+                mBtnNotify!!.isEnabled = false
+                mBtnUnnotify!!.isEnabled = true
+                CommonUtils.toast("success")
             } else {
-                CommonUtils.toast("failed");
-                mBtnRead.setText("read");
+                CommonUtils.toast("failed")
             }
         }
-    };
+    }
 
-    private final BleWriteResponse mWriteRsp = new BleWriteResponse() {
-        @Override
-        public void onResponse(int code) {
-            if (code == REQUEST_SUCCESS) {
-                CommonUtils.toast("success");
-            } else {
-                CommonUtils.toast("failed");
-            }
+    private val mUnnotifyRsp = BleUnnotifyResponse { code ->
+        if (code == Constants.REQUEST_SUCCESS) {
+            CommonUtils.toast("success")
+            mBtnNotify!!.isEnabled = true
+            mBtnUnnotify!!.isEnabled = false
+        } else {
+            CommonUtils.toast("failed")
         }
-    };
+    }
 
-    private final BleNotifyResponse mNotifyRsp = new BleNotifyResponse() {
-        @Override
-        public void onNotify(UUID service, UUID character, byte[] value) {
-            if (service.equals(mService) && character.equals(mCharacter)) {
-                mBtnNotify.setText(String.format("%s", ByteUtils.byteToString(value)));
-            }
+    private val mMtuResponse = BleMtuResponse { code, data ->
+        if (code == Constants.REQUEST_SUCCESS) {
+            CommonUtils.toast("request mtu success,mtu = $data")
+        } else {
+            CommonUtils.toast("request mtu failed")
         }
+    }
 
-        @Override
-        public void onResponse(int code) {
-            if (code == REQUEST_SUCCESS) {
-                mBtnNotify.setEnabled(false);
-                mBtnUnnotify.setEnabled(true);
-                CommonUtils.toast("success");
-            } else {
-                CommonUtils.toast("failed");
-            }
-        }
-    };
+    override fun onClick(v: View) {
+        when (v.id) {
+            R.id.read -> ClientManager.getClient().read(mMac, mService, mCharacter, mReadRsp)
+            R.id.write -> ClientManager.getClient().write(
+                mMac, mService, mCharacter, ByteUtils.stringToBytes(mEtInput!!.text.toString()), mWriteRsp
+            )
 
-    private final BleUnnotifyResponse mUnnotifyRsp = new BleUnnotifyResponse() {
-        @Override
-        public void onResponse(int code) {
-            if (code == REQUEST_SUCCESS) {
-                CommonUtils.toast("success");
-                mBtnNotify.setEnabled(true);
-                mBtnUnnotify.setEnabled(false);
-            } else {
-                CommonUtils.toast("failed");
-            }
-        }
-    };
-
-    private final BleMtuResponse mMtuResponse = new BleMtuResponse() {
-        @Override
-        public void onResponse(int code, Integer data) {
-            if (code == REQUEST_SUCCESS) {
-                CommonUtils.toast("request mtu success,mtu = " + data);
-            } else {
-                CommonUtils.toast("request mtu failed");
-            }
-        }
-    };
-
-    @Override
-    public void onClick(View v) {
-        switch (v.getId()) {
-            case R.id.read:
-                ClientManager.getClient().read(mMac, mService, mCharacter, mReadRsp);
-                break;
-            case R.id.write:
-                ClientManager.getClient().write(mMac, mService, mCharacter,
-                        ByteUtils.stringToBytes(mEtInput.getText().toString()), mWriteRsp);
-                break;
-            case R.id.notify:
-                ClientManager.getClient().notify(mMac, mService, mCharacter, mNotifyRsp);
-                break;
-            case R.id.unnotify:
-                ClientManager.getClient().unnotify(mMac, mService, mCharacter, mUnnotifyRsp);
-                break;
-            case R.id.btn_request_mtu:
-                String mtuStr = mEtInputMtu.getText().toString();
+            R.id.notify -> ClientManager.getClient().notify(mMac, mService, mCharacter, mNotifyRsp)
+            R.id.unnotify -> ClientManager.getClient().unnotify(mMac, mService, mCharacter, mUnnotifyRsp)
+            R.id.btn_request_mtu -> {
+                val mtuStr = mEtInputMtu!!.text.toString()
                 if (TextUtils.isEmpty(mtuStr)) {
-                    CommonUtils.toast("MTU不能为空");
-                    return;
+                    CommonUtils.toast("MTU不能为空")
+                    return
                 }
-                int mtu = Integer.parseInt(mtuStr);
-                if (mtu < GATT_DEF_BLE_MTU_SIZE || mtu > GATT_MAX_MTU_SIZE) {
-                    CommonUtils.toast("MTU不不在范围内");
-                    return;
+                val mtu = mtuStr.toInt()
+                if (mtu < Constants.GATT_DEF_BLE_MTU_SIZE || mtu > Constants.GATT_MAX_MTU_SIZE) {
+                    CommonUtils.toast("MTU不不在范围内")
+                    return
                 }
-                ClientManager.getClient().requestMtu(mMac, mtu, mMtuResponse);
-                break;
-        }
-    }
-
-    private final BleConnectStatusListener mConnectStatusListener = new BleConnectStatusListener() {
-        @Override
-        public void onConnectStatusChanged(String mac, int status) {
-            BluetoothLog.v(String.format("CharacterActivity.onConnectStatusChanged status = %d", status));
-
-            if (status == STATUS_DISCONNECTED) {
-                CommonUtils.toast("disconnected");
-                mBtnRead.setEnabled(false);
-                mBtnWrite.setEnabled(false);
-                mBtnNotify.setEnabled(false);
-                mBtnUnnotify.setEnabled(false);
-
-                mTvTitle.postDelayed(new Runnable() {
-
-                    @Override
-                    public void run() {
-                        finish();
-                    }
-                }, 300);
+                ClientManager.getClient().requestMtu(mMac, mtu, mMtuResponse)
             }
         }
-    };
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        ClientManager.getClient().registerConnectStatusListener(mMac, mConnectStatusListener);
     }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-        ClientManager.getClient().unregisterConnectStatusListener(mMac, mConnectStatusListener);
+    private val mConnectStatusListener: BleConnectStatusListener = object : BleConnectStatusListener() {
+        override fun onConnectStatusChanged(mac: String, status: Int) {
+            BluetoothLog.v(String.format("CharacterActivity.onConnectStatusChanged status = %d", status))
+
+            if (status == Constants.STATUS_DISCONNECTED) {
+                CommonUtils.toast("disconnected")
+                mBtnRead!!.isEnabled = false
+                mBtnWrite!!.isEnabled = false
+                mBtnNotify!!.isEnabled = false
+                mBtnUnnotify!!.isEnabled = false
+
+                mTvTitle!!.postDelayed({ finish() }, 300)
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        ClientManager.getClient().registerConnectStatusListener(mMac, mConnectStatusListener)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        ClientManager.getClient().unregisterConnectStatusListener(mMac, mConnectStatusListener)
     }
 }

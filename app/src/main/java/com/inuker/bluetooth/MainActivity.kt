@@ -1,92 +1,95 @@
-package com.inuker.bluetooth;
+package com.inuker.bluetooth
 
-import android.app.Activity;
-import android.os.Bundle;
-import android.view.View;
-import android.widget.TextView;
+import android.app.Activity
+import android.os.Bundle
+import android.view.View
+import android.widget.TextView
+import com.hjq.permissions.OnPermissionCallback
+import com.hjq.permissions.Permission
+import com.hjq.permissions.XXPermissions
+import com.inuker.bluetooth.library.connect.listener.BluetoothStateListener
+import com.inuker.bluetooth.library.search.SearchRequest
+import com.inuker.bluetooth.library.search.SearchResult
+import com.inuker.bluetooth.library.search.response.SearchResponse
+import com.inuker.bluetooth.library.utils.BluetoothLog
+import com.inuker.bluetooth.view.PullRefreshListView
+import com.inuker.bluetooth.view.PullRefreshListView.OnRefreshListener
+import com.inuker.bluetooth.view.PullToRefreshFrameLayout
 
-import com.inuker.bluetooth.library.connect.listener.BluetoothStateListener;
-import com.inuker.bluetooth.library.search.SearchRequest;
-import com.inuker.bluetooth.library.search.SearchResult;
-import com.inuker.bluetooth.library.search.response.SearchResponse;
-import com.inuker.bluetooth.library.utils.BluetoothLog;
-import com.inuker.bluetooth.view.PullRefreshListView;
-import com.inuker.bluetooth.view.PullToRefreshFrameLayout;
+class MainActivity : Activity() {
+    private var mRefreshLayout: PullToRefreshFrameLayout? = null
+    private var mListView: PullRefreshListView? = null
+    private var mAdapter: DeviceListAdapter? = null
+    private var mTvTitle: TextView? = null
 
-import java.util.ArrayList;
-import java.util.List;
+    private var mDevices: MutableList<SearchResult>? = null
 
-public class MainActivity extends Activity {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+        XXPermissions.with(this)
+            .permission(Permission.BLUETOOTH_SCAN)
+            .permission(Permission.BLUETOOTH_CONNECT)
+            .request(object : OnPermissionCallback {
+                override fun onGranted(permissions: MutableList<String>, allGranted: Boolean) {
+                    if (allGranted) {
+                    } else {
+                        XXPermissions.startPermissionActivity(this@MainActivity, permissions)
+                    }
+                }
 
-    private static final String MAC = "B0:D5:9D:6F:E7:A5";
+                override fun onDenied(permissions: MutableList<String>, doNotAskAgain: Boolean) {
+                    if (doNotAskAgain) {
+                        XXPermissions.startPermissionActivity(this@MainActivity, permissions)
+                    }
+                }
+            })
+        mDevices = ArrayList()
 
-    private PullToRefreshFrameLayout mRefreshLayout;
-    private PullRefreshListView mListView;
-    private DeviceListAdapter mAdapter;
-    private TextView mTvTitle;
+        mTvTitle = findViewById<View>(R.id.title) as TextView
 
-    private List<SearchResult> mDevices;
+        mRefreshLayout = findViewById<View>(R.id.pulllayout) as PullToRefreshFrameLayout
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        mListView = mRefreshLayout!!.pullToRefreshListView
+        mAdapter = DeviceListAdapter(this)
+        mListView?.setAdapter(mAdapter)
 
-        mDevices = new ArrayList<SearchResult>();
+        mListView?.setOnRefreshListener(OnRefreshListener { // TODO Auto-generated method stub
+            searchDevice()
+        })
 
-        mTvTitle = (TextView) findViewById(R.id.title);
+        searchDevice()
 
-        mRefreshLayout = (PullToRefreshFrameLayout) findViewById(R.id.pulllayout);
-
-        mListView = mRefreshLayout.getPullToRefreshListView();
-        mAdapter = new DeviceListAdapter(this);
-        mListView.setAdapter(mAdapter);
-
-        mListView.setOnRefreshListener(new PullRefreshListView.OnRefreshListener() {
-
-            @Override
-            public void onRefresh() {
-                // TODO Auto-generated method stub
-                searchDevice();
+        ClientManager.getClient().registerBluetoothStateListener(object : BluetoothStateListener() {
+            override fun onBluetoothStateChanged(openOrClosed: Boolean) {
+                BluetoothLog.v(String.format("onBluetoothStateChanged %b", openOrClosed))
             }
-
-        });
-
-        searchDevice();
-
-        ClientManager.getClient().registerBluetoothStateListener(new BluetoothStateListener() {
-            @Override
-            public void onBluetoothStateChanged(boolean openOrClosed) {
-                BluetoothLog.v(String.format("onBluetoothStateChanged %b", openOrClosed));
-            }
-        });
+        })
     }
 
-    private void searchDevice() {
-        SearchRequest request = new SearchRequest.Builder()
-                .searchBluetoothLeDevice(5000, 2).build();
+    private fun searchDevice() {
+        val request = SearchRequest.Builder()
+            .searchBluetoothLeDevice(5000, 2).build()
 
-        ClientManager.getClient().search(request, mSearchResponse);
+        ClientManager.getClient().search(request, mSearchResponse)
     }
 
-    private final SearchResponse mSearchResponse = new SearchResponse() {
-        @Override
-        public void onSearchStarted() {
-            BluetoothLog.w("MainActivity.onSearchStarted");
-            mListView.onRefreshComplete(true);
-            mRefreshLayout.showState(AppConstants.LIST);
-            mTvTitle.setText(R.string.string_refreshing);
-            mDevices.clear();
+    private val mSearchResponse: SearchResponse = object : SearchResponse {
+        override fun onSearchStarted() {
+            BluetoothLog.w("MainActivity.onSearchStarted")
+            mListView!!.onRefreshComplete(true)
+            mRefreshLayout!!.showState(AppConstants.LIST)
+            mTvTitle!!.setText(R.string.string_refreshing)
+            mDevices!!.clear()
         }
 
-        @Override
-        public void onDeviceFounded(SearchResult device) {
+        override fun onDeviceFounded(device: SearchResult) {
 //            BluetoothLog.w("MainActivity.onDeviceFounded " + device.device.getAddress());
-            if (!mDevices.contains(device)) {
-                mDevices.add(device);
-                mAdapter.setDataList(mDevices);
+            if (!mDevices!!.contains(device)) {
+                mDevices!!.add(device)
+                mAdapter!!.setDataList(mDevices)
 
-//                Beacon beacon = new Beacon(device.scanRecord);
+                //                Beacon beacon = new Beacon(device.scanRecord);
 //                BluetoothLog.v(String.format("beacon for %s\n%s", device.getAddress(), beacon.toString()));
 
 //                BeaconItem beaconItem = null;
@@ -99,34 +102,35 @@ public class MainActivity extends Activity {
 //                beaconParser.setPosition(0); // 将读取起点设置到第1字节处
             }
 
-            if (mDevices.size() > 0) {
-                mRefreshLayout.showState(AppConstants.LIST);
+            if (mDevices!!.size > 0) {
+                mRefreshLayout!!.showState(AppConstants.LIST)
             }
         }
 
-        @Override
-        public void onSearchStopped() {
-            BluetoothLog.w("MainActivity.onSearchStopped");
-            mListView.onRefreshComplete(true);
-            mRefreshLayout.showState(AppConstants.LIST);
+        override fun onSearchStopped() {
+            BluetoothLog.w("MainActivity.onSearchStopped")
+            mListView!!.onRefreshComplete(true)
+            mRefreshLayout!!.showState(AppConstants.LIST)
 
-            mTvTitle.setText(R.string.devices);
+            mTvTitle!!.setText(R.string.devices)
         }
 
-        @Override
-        public void onSearchCanceled() {
-            BluetoothLog.w("MainActivity.onSearchCanceled");
+        override fun onSearchCanceled() {
+            BluetoothLog.w("MainActivity.onSearchCanceled")
 
-            mListView.onRefreshComplete(true);
-            mRefreshLayout.showState(AppConstants.LIST);
+            mListView!!.onRefreshComplete(true)
+            mRefreshLayout!!.showState(AppConstants.LIST)
 
-            mTvTitle.setText(R.string.devices);
+            mTvTitle!!.setText(R.string.devices)
         }
-    };
+    }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-        ClientManager.getClient().stopSearch();
+    override fun onPause() {
+        super.onPause()
+        ClientManager.getClient().stopSearch()
+    }
+
+    companion object {
+        private const val MAC = "B0:D5:9D:6F:E7:A5"
     }
 }

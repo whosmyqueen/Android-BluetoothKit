@@ -36,10 +36,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
-    implementation(libs.androidx.activity)
-    implementation(libs.androidx.constraintlayout)
-
     implementation(libs.xxpermissions)
-    implementation(libs.android.ble)
-    implementation(libs.utilcodex)
+    implementation(project(":library"))
+    implementation(libs.androidx.coordinatorlayout)
 }
