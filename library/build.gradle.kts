@@ -1,7 +1,9 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+    id("maven-publish")
 }
+group = "com.github.whosmyqueen"
 android.buildFeatures.buildConfig = true
 android.buildFeatures.aidl = true
 android {
